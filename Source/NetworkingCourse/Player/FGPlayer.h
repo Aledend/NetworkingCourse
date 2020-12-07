@@ -47,10 +47,10 @@ public:
 		int32 GetPing() const;
 
 	UFUNCTION(Server, Unreliable)
-		void Server_SendLocation(const FVector& LocationToSend);
+	void Server_SendLocation(const FVector& LocationToSend);
 
 	UFUNCTION(NetMulticast, Unreliable)
-		void Multicast_SendLocation(const FVector& LocationToSend);
+	void Multicast_SendLocation(const FVector& LocationToSend);
 
 	UFUNCTION(Server, Unreliable)
 	void Server_SendRotation(const FRotator& RotationToSend);
@@ -58,11 +58,23 @@ public:
 	UFUNCTION(NetMulticast, Unreliable)
 	void Multicast_SendRotation(const FRotator& RotationToSend);
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Net/Movement")
+	bool bInterpolate = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Net/Movement")
+	float InterpSpeed = 5.f;
+
 private:
 	void Handle_Accelerate(float Value);
 	void Handle_Turn(float Value);
 	void Handle_BrakePressed();
 	void Handle_BrakeReleased();
+
+	FVector TargetLocation;
+	FRotator TargetRotation;
+	
+
+
 
 	float Forward = 0.0f;
 	float Turn = 0.0f;
