@@ -8,6 +8,8 @@ class USpringArmComponent;
 class UFGMovementComponent;
 class UStaticMeshComponent;
 class USphereComponent;
+class UFGPlayerSettings;
+class UFGNetDebugWidget;
 
 UCLASS()
 class NETWORKINGCOURSE_API AFGPlayer : public APawn
@@ -24,6 +26,9 @@ public:
 	virtual void Tick(float DeltaTime) override;
 
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
+
+	/*UPROPERTY(EditAnywhere, Category = Settings)
+	UFGPlayerSettings* PlayerSettings = nullptr;*/
 
 	UPROPERTY(EditAnywhere, Category = Movement)
 		float Acceleration = 500.0f;
