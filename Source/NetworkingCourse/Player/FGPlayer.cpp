@@ -8,6 +8,8 @@
 #include "GameFramework/PlayerState.h"
 #include "../Components/FGMovementComponent.h"
 #include "../FGMovementStatics.h"
+#include "Net/UnrealNetwork.h"
+#include "FGPlayerSettings.h"
 
 AFGPlayer::AFGPlayer()
 {
@@ -43,12 +45,17 @@ void AFGPlayer::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
+	if (!ensure(PlayerSettings != nullptr))
+		return;
+
 	if (IsLocallyControlled())
 	{
 
-		const float Friction = IsBraking() ? BrakingFriction : DefaultFriction;
+		const float MaxVelocity = PlayerSettings->MaxVelocity;
+		const float Acceleration = PlayerSettings->Acceleration;
+		const float Friction = IsBraking() ? PlayerSettings->BrakingFriction : PlayerSettings->Friction;
 		const float Alpha = FMath::Clamp(FMath::Abs(MovementVelocity / (MaxVelocity * 0.75f)), 0.0f, 1.0f);
-		const float TurnSpeed = FMath::InterpEaseOut(0.0f, TurnSpeedDefault, Alpha, 5.0f);
+		const float TurnSpeed = FMath::InterpEaseOut(0.0f, PlayerSettings->TurnSpeedDefault, Alpha, 5.0f);
 		const float MovementDirection = MovementVelocity > 0.0f ? Turn : -Turn;
 
 		Yaw += (MovementDirection * TurnSpeed) * DeltaTime;

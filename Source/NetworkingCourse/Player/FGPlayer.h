@@ -27,29 +27,14 @@ public:
 
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 
-	/*UPROPERTY(EditAnywhere, Category = Settings)
-	UFGPlayerSettings* PlayerSettings = nullptr;*/
-
-	UPROPERTY(EditAnywhere, Category = Movement)
-		float Acceleration = 500.0f;
-
-	UPROPERTY(EditAnywhere, Category = Movement, meta = (DisplayName = "TurnSpeed"))
-		float TurnSpeedDefault = 100.0f;
-
-	UPROPERTY(EditAnywhere, Category = Movement)
-		float MaxVelocity = 2000.0f;
-
-	UPROPERTY(EditAnywhere, Category = Movement, meta = (ClampMin = 0.0, ClampMax = 1.0))
-		float DefaultFriction = 0.75f;
-
-	UPROPERTY(EditAnywhere, Category = Movement, meta = (ClampMin = 0.0, ClampMax = 1.0))
-		float BrakingFriction = 0.001f;
+	UPROPERTY(EditAnywhere, Category = Settings)
+	UFGPlayerSettings* PlayerSettings = nullptr;
 
 	UFUNCTION(BlueprintPure)
-		bool IsBraking() const { return bBrake; }
+	bool IsBraking() const { return bBrake; }
 
 	UFUNCTION(BlueprintPure)
-		int32 GetPing() const;
+	int32 GetPing() const;
 
 	UFUNCTION(Server, Unreliable)
 	void Server_SendLocation(const FVector& LocationToSend);
