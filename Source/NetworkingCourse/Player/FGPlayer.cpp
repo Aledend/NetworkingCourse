@@ -10,6 +10,9 @@
 #include "../FGMovementStatics.h"
 #include "Net/UnrealNetwork.h"
 #include "FGPlayerSettings.h"
+#include "../Debug/UI/FGNetDebugWidget.h"
+#include "../FGRocket.h"
+#include "../FGPickup.h"
 
 AFGPlayer::AFGPlayer()
 {
@@ -37,8 +40,13 @@ void AFGPlayer::BeginPlay()
 {
 	Super::BeginPlay();
 
-
 	MovementComponent->SetUpdatedComponent(CollisionComponent);
+
+	CreateDebugWidget();
+	if (DebugMenuInstance != nullptr)
+	{
+		DebugMenuInstance->SetVisibility(ESlateVisibility::Collapsed);
+	}
 }
 
 void AFGPlayer::Tick(float DeltaTime)
@@ -73,20 +81,23 @@ void AFGPlayer::Tick(float DeltaTime)
 		MovementComponent->Move(FrameMovement);
 
 		Server_SendLocation(GetActorLocation());
-		Server_SendRotation(GetActorRotation());
-
-		
-
+		Server_SendYaw(MovementComponent->GetFacingRotation().Yaw);
 	}
 	else {
+		//const FVector TargetLocation = FMath::Lerp(GetActorLocation(), ReplicatedLocation, DeltaTime * InterpSpeed);
+		const FVector TargetLocation = FMath::InterpEaseIn(GetActorLocation(), ReplicatedLocation, DeltaTime * InterpSpeed, 1.7f);
+		const FRotator TargetRotation(0.f, ReplicatedYaw, 0.f);
+
+		MovementComponent->SetFacingRotation(TargetRotation, 7.f);
+
 		if (bInterpolate) {
 			SetActorLocation(FMath::Lerp(GetActorLocation(), TargetLocation, DeltaTime * InterpSpeed));
-			SetActorRotation(FMath::Lerp(GetActorRotation(), TargetRotation, DeltaTime * InterpSpeed));
+			SetActorRotation(FMath::Lerp(GetActorRotation(), MovementComponent->GetFacingRotation(), DeltaTime * InterpSpeed));
 		}
 		else
 		{
 			SetActorLocation(TargetLocation);
-			SetActorRotation(TargetRotation);
+			SetActorRotation(MovementComponent->GetFacingRotation());
 		}
 	}
 
@@ -102,6 +113,8 @@ void AFGPlayer::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 
 	PlayerInputComponent->BindAction(TEXT("Brake"), IE_Pressed, this, &AFGPlayer::Handle_BrakePressed);
 	PlayerInputComponent->BindAction(TEXT("Brake"), IE_Released, this, &AFGPlayer::Handle_BrakeReleased);
+
+	PlayerInputComponent->BindAction(TEXT("DebugMenu"), IE_Pressed, this, &AFGPlayer::Handle_DebugMenuPressed);
 }
 
 int32 AFGPlayer::GetPing() const
@@ -113,30 +126,54 @@ int32 AFGPlayer::GetPing() const
 	return 0;
 }
 
-void AFGPlayer::Multicast_SendLocation_Implementation(const FVector& LocationToSend)
+void AFGPlayer::ShowDebugMenu()
 {
-	if (IsLocallyControlled() == false)
-	{
-		TargetLocation = LocationToSend;
-	}
+	CreateDebugWidget();
+
+	if (DebugMenuInstance == nullptr)
+		return;
+
+	DebugMenuInstance->SetVisibility(ESlateVisibility::Visible);
+	DebugMenuInstance->BP_OnShowWidget();
 }
 
-void AFGPlayer::Server_SendRotation_Implementation(const FRotator& RotationToSend)
+void AFGPlayer::HideDebugMenu()
 {
-	Multicast_SendRotation(RotationToSend);
+	if (DebugMenuInstance == nullptr)
+		return;
+
+	DebugMenuInstance->SetVisibility(ESlateVisibility::Collapsed);
+	DebugMenuInstance->BP_OnHideWidget();
 }
 
-void AFGPlayer::Multicast_SendRotation_Implementation(const FRotator& RotationToSend)
+
+void AFGPlayer::Server_SendYaw_Implementation(const float YawToSend)
 {
-	if (IsLocallyControlled() == false)
-	{
-		TargetRotation = RotationToSend;
-	}
+	ReplicatedYaw = YawToSend;
 }
+
 
 void AFGPlayer::Server_SendLocation_Implementation(const FVector& LocationToSend)
 {
-	Multicast_SendLocation(LocationToSend);
+	ReplicatedLocation = LocationToSend;
+}
+
+void AFGPlayer::OnPickup(AFGPickup* Pickup)
+{
+	if (IsLocallyControlled())
+		Server_OnPickup(Pickup);
+}
+
+void AFGPlayer::Server_OnPickup_Implementation(AFGPickup* Pickup)
+{
+	ServerNumRockets += Pickup->NumRockets;
+	Client_OnPickupRockets(Pickup->NumRockets);
+}
+
+void AFGPlayer::Client_OnPickupRockets_Implementation(int32 PickedUpRockets)
+{
+	NumRockets += PickedUpRockets;
+	BP_OnNumRocketsChanged(NumRockets);
 }
 
 void AFGPlayer::Handle_Accelerate(float Value)
@@ -159,3 +196,35 @@ void AFGPlayer::Handle_BrakeReleased()
 	bBrake = false;
 }
 
+void AFGPlayer::Handle_DebugMenuPressed()
+{
+	bShowDebugMenu = !bShowDebugMenu;
+
+	if (bShowDebugMenu)
+		ShowDebugMenu();
+	else
+		HideDebugMenu();
+}
+
+void AFGPlayer::CreateDebugWidget()
+{
+	if (DebugMenuClass == nullptr)
+		return;
+
+	if (!IsLocallyControlled())
+		return;
+
+	if (DebugMenuInstance == nullptr)
+	{
+		DebugMenuInstance = CreateWidget<UFGNetDebugWidget>(GetWorld(), DebugMenuClass);
+		DebugMenuInstance->AddToViewport();
+	}
+}
+
+void AFGPlayer::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+
+	DOREPLIFETIME(AFGPlayer, ReplicatedYaw);
+	DOREPLIFETIME(AFGPlayer, ReplicatedLocation);
+}

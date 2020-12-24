@@ -94,8 +94,6 @@ DO
 } While ($deletingAllowed -eq 0)
 Write-Host "";
 
-
-
 #Delete directories/files
 $paths | ForEach-Object -Process {if (Test-Path  $_ -PathType Any) { Remove-Item -path $_ -recurse -force}}
 

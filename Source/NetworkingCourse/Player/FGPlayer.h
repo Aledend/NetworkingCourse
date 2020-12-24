@@ -10,6 +10,8 @@ class UStaticMeshComponent;
 class USphereComponent;
 class UFGPlayerSettings;
 class UFGNetDebugWidget;
+class AFGRocket;
+class AFGPickup;
 
 UCLASS()
 class NETWORKINGCOURSE_API AFGPlayer : public APawn
@@ -36,17 +38,26 @@ public:
 	UFUNCTION(BlueprintPure)
 	int32 GetPing() const;
 
+	UPROPERTY(EditAnywhere, Category = Debug)
+	TSubclassOf<UFGNetDebugWidget> DebugMenuClass;
+
+	void ShowDebugMenu();
+	void HideDebugMenu();
+
 	UFUNCTION(Server, Unreliable)
 	void Server_SendLocation(const FVector& LocationToSend);
 
-	UFUNCTION(NetMulticast, Unreliable)
-	void Multicast_SendLocation(const FVector& LocationToSend);
+	void OnPickup(AFGPickup* Pickup);
+
+	UFUNCTION(Server, Reliable)
+	void Server_OnPickup(AFGPickup* Pickup);
+
+	UFUNCTION(Client, Reliable)
+	void Client_OnPickupRockets(int32 PickedUpRockets);
 
 	UFUNCTION(Server, Unreliable)
-	void Server_SendRotation(const FRotator& RotationToSend);
+	void Server_SendYaw(const float YawToSend);
 
-	UFUNCTION(NetMulticast, Unreliable)
-	void Multicast_SendRotation(const FRotator& RotationToSend);
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Net/Movement")
 	bool bInterpolate = false;
@@ -54,17 +65,35 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Net/Movement")
 	float InterpSpeed = 5.f;
 
+	UFUNCTION(BlueprintImplementableEvent, Category = Player, meta = (DisplayName = "On Num Rockets Changed"))
+	void BP_OnNumRocketsChanged(int32 NewNumRockets);
+
 private:
+	int32 ServerNumRockets = 0;
+
+	UPROPERTY(BlueprintReadOnly, Category = Player, meta = (AllowPrivateAccess = true))
+	int32 NumRockets = 0;
+
 	void Handle_Accelerate(float Value);
 	void Handle_Turn(float Value);
 	void Handle_BrakePressed();
 	void Handle_BrakeReleased();
 
-	FVector TargetLocation;
-	FRotator TargetRotation;
+	void Handle_DebugMenuPressed();
+
+	void CreateDebugWidget();
+
+	UPROPERTY(Transient)
+	UFGNetDebugWidget* DebugMenuInstance = nullptr;
+
+	bool bShowDebugMenu = false;
+
+
+	UPROPERTY(Replicated)
+	float ReplicatedYaw = 0.f;
 	
-
-
+	UPROPERTY(Replicated)
+	FVector ReplicatedLocation;
 
 	float Forward = 0.0f;
 	float Turn = 0.0f;
