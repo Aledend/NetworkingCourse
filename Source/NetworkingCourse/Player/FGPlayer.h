@@ -68,11 +68,46 @@ public:
 	UFUNCTION(BlueprintImplementableEvent, Category = Player, meta = (DisplayName = "On Num Rockets Changed"))
 	void BP_OnNumRocketsChanged(int32 NewNumRockets);
 
+	int32 GetNumActiveRockets() const;
+
+	void FireRocket();
+
+	void SpawnRockets();
+
 private:
 	int32 ServerNumRockets = 0;
 
 	UPROPERTY(BlueprintReadOnly, Category = Player, meta = (AllowPrivateAccess = true))
 	int32 NumRockets = 0;
+
+	FVector GetRocketStartLocation() const;
+
+	AFGRocket* GetFreeRocket() const;
+
+	UFUNCTION(Server, Reliable)
+	void Server_FireRocket(AFGRocket* NewRocket, const FVector& RocketStartLocation, const FRotator& RocketFacingRotation);
+
+	UFUNCTION(NetMulticast, Reliable)
+	void Multicast_FireRocket(AFGRocket* NewRocket, const FVector& RocketStartLocation, const FRotator& RocketFacingRotation);
+
+	UFUNCTION(Client, Reliable)
+	void Client_RemoveRocket(AFGRocket* RocketToRemove);
+
+	UFUNCTION(BlueprintCallable)
+	void Cheat_IncreaseRockets(int32 InNumRockets);
+
+	UPROPERTY(Replicated, Transient)
+	TArray<AFGRocket*> RocketInstances;
+
+	UPROPERTY(EditAnywhere, Category = Weapon)
+	TSubclassOf<AFGRocket> RocketClass;
+
+	int32 MaxActiveRockets = 3;
+
+	float FireCooldownElapsed = 0.0f;
+
+	UPROPERTY(EditAnywhere, Category = Weapon)
+	bool bUnlimitedRockets = false;
 
 	void Handle_Accelerate(float Value);
 	void Handle_Turn(float Value);
@@ -80,8 +115,11 @@ private:
 	void Handle_BrakeReleased();
 
 	void Handle_DebugMenuPressed();
+	
+	void Handle_FirePressed();
 
 	void CreateDebugWidget();
+
 
 	UPROPERTY(Transient)
 	UFGNetDebugWidget* DebugMenuInstance = nullptr;
