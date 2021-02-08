@@ -59,12 +59,6 @@ public:
 	void Server_SendYaw(const float YawToSend);
 
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Net/Movement")
-	bool bInterpolate = false;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Net/Movement")
-	float InterpSpeed = 5.f;
-
 	UFUNCTION(BlueprintImplementableEvent, Category = Player, meta = (DisplayName = "On Num Rockets Changed"))
 	void BP_OnNumRocketsChanged(int32 NewNumRockets);
 
@@ -75,6 +69,8 @@ public:
 	void SpawnRockets();
 
 private:
+	void AddMovementVelocity(float DeltaTime);
+
 	int32 ServerNumRockets = 0;
 
 	UPROPERTY(BlueprintReadOnly, Category = Player, meta = (AllowPrivateAccess = true))
@@ -83,6 +79,13 @@ private:
 	FVector GetRocketStartLocation() const;
 
 	AFGRocket* GetFreeRocket() const;
+
+	UFUNCTION(NetMulticast, Unreliable)
+	void Multicast_SendMovement(const FVector& InClientLocation, float TimeStamp, float ClientForward, float ClientYaw);
+
+	UFUNCTION(Server, Unreliable)
+	void Server_SendMovement(const FVector& ClientLocation, float TimeStamp, float ClientForward, float ClientYaw);
+
 
 	UFUNCTION(Server, Reliable)
 	void Server_FireRocket(AFGRocket* NewRocket, const FVector& RocketStartLocation, const FRotator& RocketFacingRotation);
@@ -141,18 +144,27 @@ private:
 
 	bool bBrake = false;
 
+	float ClientTimeStamp = 0.f;
+	float ServerTimeStamp = 0.f;
+	float LastCorrectionDelta = 0.f;
+
+	UPROPERTY(EditAnywhere, Category = Network)
+	bool bPerformNetworkSmoothing = false;
+
+	FVector OriginalMeshOffset = FVector::ZeroVector;
+
 	UPROPERTY(VisibleDefaultsOnly, Category = Collision)
-		USphereComponent* CollisionComponent;
+	USphereComponent* CollisionComponent;
 
 	UPROPERTY(VisibleDefaultsOnly, Category = Mesh)
-		UStaticMeshComponent* MeshComponent;
+	UStaticMeshComponent* MeshComponent;
 
 	UPROPERTY(VisibleDefaultsOnly, Category = Camera)
-		USpringArmComponent* SpringArmComponent;
+	USpringArmComponent* SpringArmComponent;
 
 	UPROPERTY(VisibleDefaultsOnly, Category = Camera)
-		UCameraComponent* CameraComponent;
+	UCameraComponent* CameraComponent;
 
 	UPROPERTY(VisibleDefaultsOnly, Category = Movement)
-		UFGMovementComponent* MovementComponent;
+	UFGMovementComponent* MovementComponent;
 };
